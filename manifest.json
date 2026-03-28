@@ -2,7 +2,7 @@
     "name": "Hacker News Enhancement Suite",
     "short_name": "HNES",
     "version": "1.6.0.4",
-    "description": "Hacker News Enhanced.",
+    "description": "Enhance Hacker News with collapsible comments, GitHub star counts, keyboard shortcuts, user tags, new comment tracking, and a modern UI.",
     "manifest_version": 3,
     "homepage_url": "https://testy.cool/tools/hnes",
     "background": {

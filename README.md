@@ -52,6 +52,7 @@ Features
   * p - View comments
   * c - View comments in a new tab
   * b - Open both the comments and the story in new tabs
+* GitHub star counts displayed next to repo links (cached, rate-limit aware)
 * Tag users
 
 TODO
