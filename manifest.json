@@ -12,6 +12,9 @@
       "storage",
       "unlimitedStorage"
     ],
+    "host_permissions": [
+      "https://api.github.com/*"
+    ],
     "icons": {
         "16" : "images/icon-16.png",
         "48" : "images/icon-48.png",

@@ -942,3 +942,20 @@ body#login-body {
 #threads-body .morelink:hover {
   text-decoration: underline;
 }
+
+/* GitHub stars badge */
+a.hnes-gh-stars, a.hnes-gh-stars:visited {
+  font-size: 11px;
+  color: #888 !important;
+  margin-left: 6px;
+  white-space: nowrap;
+  text-decoration: none !important;
+}
+a.hnes-gh-stars:hover {
+  color: #333 !important;
+  text-decoration: underline !important;
+}
+.hnes-gh-icon {
+  vertical-align: -2px;
+  margin-right: 1px;
+}
