@@ -74,43 +74,61 @@ function handleGetUserData(usernames, sendResponse) {
   });
 }
 
-// In-memory cache for GitHub stars (survives across page loads while service worker is alive)
-const ghStarsCache = {};
-const GH_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+// GitHub stars cache — persisted to chrome.storage.local, keyed as "gh_stars_<owner/repo>"
+const GH_CACHE_TTL = 3 * 60 * 60 * 1000; // 3 hours
+const GH_CACHE_PREFIX = 'gh_stars_';
+let ghRateLimited = false;
 
 function handleFetchGithubStars(repos, sendResponse) {
-  const results = {};
-  const toFetch = [];
-  const now = Date.now();
+  const cacheKeys = repos.map(r => GH_CACHE_PREFIX + r);
 
-  for (const repo of repos) {
-    const cached = ghStarsCache[repo];
-    if (cached && now - cached.time < GH_CACHE_TTL) {
-      results[repo] = cached.stars;
-    } else {
-      toFetch.push(repo);
-    }
-  }
+  chrome.storage.local.get(cacheKeys, cached => {
+    const results = {};
+    const toFetch = [];
+    const now = Date.now();
 
-  if (toFetch.length === 0) {
-    sendResponse({ data: results });
-    return;
-  }
-
-  Promise.all(toFetch.map(repo =>
-    fetch(`https://api.github.com/repos/${repo}`, {
-      headers: { 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'HNES-Extension/1.6' }
-    })
-    .then(r => r.ok ? r.json() : null)
-    .then(data => {
-      if (data && typeof data.stargazers_count === 'number') {
-        const stars = data.stargazers_count;
-        ghStarsCache[repo] = { stars, time: now };
-        results[repo] = stars;
+    for (const repo of repos) {
+      const entry = cached[GH_CACHE_PREFIX + repo];
+      if (entry && typeof entry === 'object' && now - entry.time < GH_CACHE_TTL) {
+        results[repo] = entry.stars;
+      } else {
+        toFetch.push(repo);
       }
-    })
-    .catch(() => {})
-  )).then(() => sendResponse({ data: results }));
+    }
+
+    if (toFetch.length === 0 || ghRateLimited) {
+      sendResponse({ data: results });
+      return;
+    }
+
+    Promise.all(toFetch.map(repo =>
+      fetch(`https://api.github.com/repos/${repo}`, {
+        headers: { 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'HNES-Extension/1.6' }
+      })
+      .then(r => {
+        const remaining = r.headers.get('X-RateLimit-Remaining');
+        if (remaining !== null && parseInt(remaining) <= 0) {
+          ghRateLimited = true;
+          const reset = r.headers.get('X-RateLimit-Reset');
+          if (reset) {
+            const ms = parseInt(reset) * 1000 - now;
+            if (ms > 0) setTimeout(() => { ghRateLimited = false; }, ms);
+          }
+        }
+        return r.ok ? r.json() : null;
+      })
+      .then(data => {
+        if (data && typeof data.stargazers_count === 'number') {
+          const stars = data.stargazers_count;
+          results[repo] = stars;
+          const toStore = {};
+          toStore[GH_CACHE_PREFIX + repo] = { stars, time: now };
+          chrome.storage.local.set(toStore);
+        }
+      })
+      .catch(() => {})
+    )).then(() => sendResponse({ data: results }));
+  });
 }
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
