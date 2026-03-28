@@ -959,3 +959,17 @@ a.hnes-gh-stars:hover {
   vertical-align: -2px;
   margin-right: 1px;
 }
+#hnes-wrapper {
+  position: relative;
+}
+#hnes-settings {
+  left: 0;
+  padding-right: 16px;
+  white-space: nowrap;
+}
+#hnes-settings a {
+  padding-right: 28px;
+}
+.hnes-gh-toggle-off {
+  opacity: 0.6;
+}

@@ -1688,6 +1688,66 @@ var HN = {
       user_drop.click(user_drop_toggle);
       hidden_div.click(user_drop_toggle);
       hidden_div.hide();
+
+      // HNES settings dropdown
+      var hnes_drop = $('<span/>').append(
+                        $('<a/>').text('HNES')
+                                 .attr('href', '#')
+                      ).attr('title', 'HNES settings')
+                      .attr('id', 'hnes-settings-link')
+                      .addClass('more-arrow');
+      var hnes_div = $('<div/>').attr('id', 'hnes-settings')
+                                .addClass('nav-drop-down');
+
+      // GitHub stars toggle
+      var ghToggle = $('<a/>').attr('href', '#')
+                              .addClass('hnes-gh-toggle');
+      chrome.runtime.sendMessage(
+        { method: 'getLocalStorage', key: 'hnes_show_github_stars' },
+        function(response) {
+          var enabled = !(response && response.data === 'false');
+          ghToggle.text(enabled ? '★ GitHub stars' : '☆ GitHub stars');
+          ghToggle.toggleClass('hnes-gh-toggle-off', !enabled);
+        }
+      );
+      ghToggle.click(function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        chrome.runtime.sendMessage(
+          { method: 'getLocalStorage', key: 'hnes_show_github_stars' },
+          function(response) {
+            var wasEnabled = !(response && response.data === 'false');
+            var newVal = wasEnabled ? 'false' : 'true';
+            chrome.runtime.sendMessage(
+              { method: 'setLocalStorage', key: 'hnes_show_github_stars', value: newVal },
+              function() {
+                ghToggle.text(wasEnabled ? '☆ GitHub stars' : '★ GitHub stars');
+                ghToggle.toggleClass('hnes-gh-toggle-off', wasEnabled);
+                if (!wasEnabled) {
+                  HN._fetchAndDisplayStars();
+                } else {
+                  $('.hnes-gh-stars').remove();
+                }
+              }
+            );
+          }
+        );
+      });
+      hnes_div.append(ghToggle);
+
+      var hnes_sep = $('<span/>').text('|');
+      var hnes_wrapper = $('<span/>').attr('id', 'hnes-wrapper').append(hnes_drop).append(hnes_div);
+      user_links.prepend(hnes_sep);
+      user_links.prepend(hnes_wrapper);
+
+      var hnes_toggle = function() {
+        hnes_drop.find('a').toggleClass('active');
+        hnes_div.toggle();
+      };
+      hnes_drop.click(hnes_toggle);
+      hnes_div.click(hnes_toggle);
+      hnes_div.hide();
+
       HN.setTopColor();
     },
     rewriteNavigation: function() {
