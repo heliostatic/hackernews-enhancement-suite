@@ -904,7 +904,11 @@ var HN = {
     },
 
     injectCSS: function() {
-      $('head').append('<link rel="stylesheet" type="text/css" href="news.css">');
+      var link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.type = 'text/css';
+      link.href = 'news.css';
+      document.head.appendChild(link);
     },
 
     getLocalStorage: function(key, callback) {
