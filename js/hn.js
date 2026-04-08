@@ -224,10 +224,10 @@ var CommentTracker = {
   },
 
   checkIndexPage: function() {
-    $('.comments').each(function() {
-      var href = $(this).attr('href');
+    document.querySelectorAll('.comments').forEach(function(el) {
+      var href = el.getAttribute('href');
       if (href) {
-        var id=$(this).attr('href').match(/id=(\d+)/);
+        var id = href.match(/id=(\d+)/);
         if(id){
             id = Number(id[1]);
         }
@@ -236,23 +236,24 @@ var CommentTracker = {
             //I have observed this happening on dead links, which seem to grab the URL from the "web" link
             return;
         }
-        var el = $(this);
         HN.getLocalStorage(id, function(response) {
           if (response.data) {
             var data = JSON.parse(response.data);
-            var num = Number(el.text());
+            var num = Number(el.textContent);
 
             var diff = num - data.num;
             if (diff > 0) {
-              var newcomm = $('<span/>').addClass('newcomments')
-                                        .attr('title', 'New Comments')
-                                        .text(diff + ' / ');
-              var totalcomm = $('<span/>').text(el.text())
-                                          .addClass('totalcomments')
-                                          .attr('title', 'Total Comments');
-              el.empty();
-              el.append(newcomm)
-                .append(totalcomm);
+              var newcomm = document.createElement('span');
+              newcomm.classList.add('newcomments');
+              newcomm.title = 'New Comments';
+              newcomm.textContent = diff + ' / ';
+              var totalcomm = document.createElement('span');
+              totalcomm.textContent = el.textContent;
+              totalcomm.classList.add('totalcomments');
+              totalcomm.title = 'Total Comments';
+              el.textContent = '';
+              el.appendChild(newcomm);
+              el.appendChild(totalcomm);
             }
           }
         });
@@ -461,6 +462,7 @@ class HNComments {
       voteblockEl = commentEl.querySelector('.voteblock');
 
     c.el = commentEl;
+    commentEl.classList.add('comtr');
 
     tagImageEl.src = chrome.runtime.getURL('/images/tag.svg');
 
@@ -477,7 +479,7 @@ class HNComments {
     }
     commentEl.querySelector('.permalink').href = c.permalinkUrl;
     authorEl.textContent = c.username;
-    authorEl.href = c.userUrl;
+    authorEl.setAttribute('href', 'user?id=' + c.username);
 
     if (c.isCollapsed) commentEl.classList.add('collapsed');
 
@@ -539,9 +541,11 @@ class HNComments {
       commentEl.querySelector('.score').classList.add('visible');
     }
 
-    for (let parts = c.textParts, textContainer = commentEl.querySelector('.text'), i = 0; i < parts.length; i++) {
+    var textContainer = commentEl.querySelector('.text');
+    for (let parts = c.textParts, i = 0; i < parts.length; i++) {
       textContainer.appendChild(parts[i]);
     }
+    textContainer.classList.add('commtext');
 
     commentEl.querySelector('.collapser').addEventListener('click', e => {
       e.preventDefault();
@@ -1100,43 +1104,51 @@ var HN = {
       if (itemIdResults) {
         itemId = /id=(\w+)/.exec(window.location.search)[1] ;
       }
-      below_header = $('#content table');
+      var below_header = document.getElementById('content').querySelectorAll('table');
 
-      $("<p id='loading_comments'>Loading comments</p>").insertBefore(below_header[1])
+      var loadingP = document.createElement('p');
+      loadingP.id = 'loading_comments';
+      loadingP.textContent = 'Loading comments';
+      below_header[1].parentNode.insertBefore(loadingP, below_header[1]);
 
       if (pathname == "/item") {
-        $("body").attr("id", "item-body");
-        $(below_header[0]).addClass('item-header');
+        document.body.id = "item-body";
+        below_header[0].classList.add('item-header');
 
-        comments = $(below_header[1]);
-        comments.addClass('comments-table');
+        comments = below_header[1];
+        comments.classList.add('comments-table');
 
-        var poll = $('.item-header table');
+        var poll = document.querySelector('.item-header table');
         if (poll)
           HN.graphPoll(poll);
 
         //linkify self-post text
-        $('.item-header tr:nth-child(3)').addClass('self-post-text').linkify();
+        var selfPostRow = document.querySelector('.item-header tr:nth-child(3)');
+        if (selfPostRow) {
+          selfPostRow.classList.add('self-post-text');
+          $(selfPostRow).linkify();
+        }
 
         //fix spacing issue #86
-        $(".item-header td").removeAttr('colspan');
+        document.querySelectorAll(".item-header td").forEach(function(td) { td.removeAttribute('colspan'); });
 
         //fixes issue #121 (indent on individual comment pages)
-        $(".item-header td[class='ind']").remove()
+        document.querySelectorAll(".item-header td[class='ind']").forEach(function(td) { td.remove(); });
 
         // move reply button to new line.
-        $(".item-header input[type='submit']").css("display", "block");
+        var submitBtn = document.querySelector(".item-header input[type='submit']");
+        if (submitBtn) submitBtn.style.display = "block";
 
-        var more = $('.morelink');
+        var more = document.querySelector('.morelink');
         //recursively load more pages on closed thread
         if (more) {
           HN.loadMoreLink(more);
         }
       }
       else {// if (pathname == "/threads") {
-        $("body").attr("id", "threads-body");
-        comments = $(below_header[0]);
-        comments.addClass('comment-tree');
+        document.body.id = "threads-body";
+        comments = below_header[0];
+        comments.classList.add('comment-tree');
         HN.doAfterCommentsLoad();
       }
 
@@ -1324,25 +1336,32 @@ var HN = {
     graphPoll: function(poll) {
       var poll_max_width = 500;
       var totalscore = 0;
-      var poll_scores = poll.find('.default');
-      poll_scores.each(function() {
-        var score = Number($(this).text().split(' ')[0]);
+      var poll_scores = poll.querySelectorAll('.default');
+      poll_scores.forEach(function(el) {
+        var score = Number(el.textContent.split(' ')[0]);
         totalscore += score;
       });
-      poll_scores.each(function() {
-        var score = Number($(this).text().split(' ')[0]);
+      poll_scores.forEach(function(el) {
+        var score = Number(el.textContent.split(' ')[0]);
         if (score > 0) {
           var width = Math.max(1, score / totalscore * poll_max_width);
-          var graph_el = $('<tr/>').append($('<td/>'))
-                                   .append($('<td/>').append($('<div/>').addClass('poll-graph')
-                                                                        .width(width)));
-          $(this).parent().after(graph_el)
+          var tr = document.createElement('tr');
+          var td1 = document.createElement('td');
+          var td2 = document.createElement('td');
+          var div = document.createElement('div');
+          div.classList.add('poll-graph');
+          div.style.width = width + 'px';
+          td2.appendChild(div);
+          tr.appendChild(td1);
+          tr.appendChild(td2);
+          el.parentElement.after(tr);
         }
       });
     },
 
     loadMoreLink: function(elem) {
-      if (elem.length == 0) {
+      // elem may be a native element or jQuery object
+      if (!elem || (elem.length !== undefined && elem.length == 0)) {
         HN.doAfterCommentsLoad();
         return;
       }
@@ -1352,14 +1371,21 @@ var HN = {
         loading_comments.textContent += '.';
       }
 
-      var moreurl = elem.attr('href');
-      var load_div = $('<div/>');
-      load_div.load(moreurl + " > center > table > tbody > tr:nth-child(3) > td > table > tbody > tr", function(response) {
-        $(".comments-table > tbody").append(load_div.children());
-        $(".morelink").remove();
-        morelink = $('.title a[rel="nofollow"]:contains(More)');
-        if (morelink) {
+      var moreurl = elem.getAttribute ? elem.getAttribute('href') : elem.href;
+      fetch(moreurl).then(function(r) { return r.text(); }).then(function(html) {
+        var doc = new DOMParser().parseFromString(html, 'text/html');
+        var rows = doc.querySelectorAll('center > table > tbody > tr:nth-child(3) > td > table > tbody > tr');
+        var commentsBody = document.querySelector(".comments-table > tbody");
+        rows.forEach(function(row) {
+          commentsBody.appendChild(document.adoptNode(row));
+        });
+        var oldMorelink = document.querySelector(".morelink");
+        if (oldMorelink) oldMorelink.remove();
+        var morelink = document.querySelector('.title a[rel="nofollow"]');
+        if (morelink && morelink.textContent.indexOf('More') !== -1) {
           HN.loadMoreLink(morelink);
+        } else {
+          HN.doAfterCommentsLoad();
         }
       });
     },
@@ -1373,18 +1399,28 @@ var HN = {
     },
 
     replaceVoteButtons: function(isPostList) {
-      $('img[src$="grayarrow.gif"]').replaceWith('<div class="up-arrow"></div>');
-      $('img[src$="graydown.gif"]').replaceWith('<div class="down-arrow last-arrow"></div>');
+      document.querySelectorAll('img[src$="grayarrow.gif"]').forEach(function(img) {
+        var div = document.createElement('div');
+        div.className = 'up-arrow';
+        img.replaceWith(div);
+      });
+      document.querySelectorAll('img[src$="graydown.gif"]').forEach(function(img) {
+        var div = document.createElement('div');
+        div.className = 'down-arrow last-arrow';
+        img.replaceWith(div);
+      });
 
       if (isPostList) {
-        $('div.up-arrow').addClass('postlist-arrow');
+        document.querySelectorAll('div.up-arrow').forEach(function(el) {
+          el.classList.add('postlist-arrow');
+        });
       } else {
         // any up-arrows that don't have a down arrow next to them, add the last-arrow class
         // as well, which will give a bit extra margin before the show/hide link
-        $('div.up-arrow').each(function() {
-          var numbuttons = $($(this).parents('center').get(0)).find('a').size();
-          if (numbuttons == 1) {
-            $(this).addClass('last-arrow');
+        document.querySelectorAll('div.up-arrow').forEach(function(el) {
+          var center = el.closest('center');
+          if (center && center.querySelectorAll('a').length == 1) {
+            el.classList.add('last-arrow');
           }
         });
       }
@@ -1432,33 +1468,35 @@ var HN = {
       });
 
 
-      $(document).on('click', '.hnes-tag, .hnes-tagText', function(e) {
-      // Using .on() so that the event applies to all elements generated in the future
-        HN.editUserTag(e);
+      document.addEventListener('click', function(e) {
+        if (e.target.matches('.hnes-tag, .hnes-tagText')) {
+          HN.editUserTag(e);
+        }
       });
 
-      $(document).on('keyup', '.hnes-tagEdit', function(e) {
-        var code = e.keyCode || e.which,
-            parent = $(e.target).parent(),
-            gp = parent.parent();
+      document.addEventListener('keyup', function(e) {
+        if (e.target.matches('.hnes-tagEdit')) {
+          var code = e.keyCode || e.which,
+              parent = e.target.parentElement,
+              gp = parent.parentElement;
 
-        if (code === 13) { // Enter
-          var author = gp.find('a').text(),
-              tagEdit = parent.find('.hnes-tagEdit');
-          HN.setUserTag(author, tagEdit.val());
-          parent.removeClass('edit');
-        }
-        if (code === 27) { // Escape
-          var tagText = parent.find('.hnes-tagText'),
-              tagEdit = parent.find('.hnes-tagEdit');
-          tagEdit.val(tagText.text());
-          parent.removeClass('edit');
+          if (code === 13) { // Enter
+            var author = gp.querySelector('a').textContent,
+                tagEdit = parent.querySelector('.hnes-tagEdit');
+            HN.setUserTag(author, tagEdit.value);
+            parent.classList.remove('edit');
+          }
+          if (code === 27) { // Escape
+            var tagText = parent.querySelector('.hnes-tagText'),
+                tagEdit = parent.querySelector('.hnes-tagEdit');
+            tagEdit.value = tagText.textContent;
+            parent.classList.remove('edit');
+          }
         }
       });
     },
 
     upvoteUserData: function(author, value) { // Adds value to the user's upvote count, saves and displays it.
-      var commenter = $('.author:contains('+author+')');
       HN.getLocalStorage(author, function(response) {
         var userInfo = {},
         new_upvote_total = value;
@@ -1480,17 +1518,17 @@ var HN = {
     },
 
     showNewUserScore: function(author, value) {
-      var author_els = $('.author:contains('+author+')');
-      for (var i = 0; i < author_els.length; i++) {
-        var author_el = author_els[i];
+      document.querySelectorAll('.author').forEach(function(author_el) {
+        if (author_el.textContent.indexOf(author) === -1) return;
         var score_el = author_el.querySelector('.hnes-user-score');
+        if (!score_el) return;
         if (value !== 0) {
           score_el.textContent = value;
           score_el.parentElement.classList.remove('noscore');
         } else {
           score_el.parentElement.classList.add('noscore');
         }
-      }
+      });
     },
 
     displayUserScore: function(el, upvotes) {
@@ -1507,10 +1545,10 @@ var HN = {
     },
 
     editUserTag: function(e) {
-      var parent = $(e.target).parent(),
-          tagEdit = parent.find('.hnes-tagEdit'),
-          tagText = parent.find('.hnes-tagText');
-      parent.addClass('edit');
+      var parent = e.target.parentElement,
+          tagEdit = parent.querySelector('.hnes-tagEdit'),
+          tagText = parent.querySelector('.hnes-tagText');
+      parent.classList.add('edit');
       tagEdit.focus();
     },
 
@@ -1529,19 +1567,20 @@ var HN = {
         HN.setLocalStorage(author, JSON.stringify(userInfo));
       });
 
-      var commenter = $('.author:contains('+author+')');
-      for (i = 0; i < commenter.length; i++) {
-        var tagText = $(commenter[i]).parent().find('.hnes-tagText'),
-            tagEdit = $(commenter[i]).parent().find('.hnes-tagEdit');
+      document.querySelectorAll('.author').forEach(function(el) {
+        if (el.textContent.indexOf(author) === -1) return;
+        var tagText = el.parentElement.querySelector('.hnes-tagText'),
+            tagEdit = el.parentElement.querySelector('.hnes-tagEdit');
+        if (!tagText || !tagEdit) return;
 
         // Change it all to the new value:
-        tagText.text(tag);
-        tagEdit.val(tag);
-      }
+        tagText.textContent = tag;
+        tagEdit.value = tag;
+      });
     },
 
     removeNumbers: function() {
-      $('td[align="right"]').remove();
+      document.querySelectorAll('td[align="right"]').forEach(function(el) { el.remove(); });
     },
 
     formatScore: function() {
