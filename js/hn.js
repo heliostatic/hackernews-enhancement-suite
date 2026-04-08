@@ -1892,7 +1892,7 @@ var HN = {
             c = 67, // Comments in new tab
             b = 66, // Open comments and link in new tab
             shiftKey = 16; // allow modifier
-        $(document).keydown(function(e){
+        document.addEventListener('keydown', function(e){
           //Keyboard shortcuts disabled when search focused
           if (!HN.searchInputFocused && !e.ctrlKey) {
             if (e.which == j) {
@@ -1938,47 +1938,46 @@ var HN = {
     },
 
     next_or_prev_story: function(next){
-      if ($('.on_story').length == 0) {
+      if (!document.querySelector('.on_story')) {
         if (next)
-          $('#content tr:first').addClass("on_story");
+          document.querySelector('#content tr').classList.add("on_story");
       } else {
-        var current = $('.on_story');
+        var current = document.querySelector('.on_story');
         var next_lem;
         if (next)
-          next_lem = current.next();
+          next_lem = current.nextElementSibling;
         else
-          next_lem = current.prev();
-        if (next_lem.length) {
-          next_lem.addClass("on_story");
-          $('html, body').stop();
-          $('html, body').animate({
-            scrollTop: next_lem.offset().top - 10
-            }, 200);
-          current.removeClass("on_story");
+          next_lem = current.previousElementSibling;
+        if (next_lem) {
+          next_lem.classList.add("on_story");
+          window.scrollTo({ top: next_lem.getBoundingClientRect().top + window.scrollY - 10, behavior: 'smooth' });
+          current.classList.remove("on_story");
         }
       }
     },
 
     open_story: function(new_tab){
-      if ($('.on_story').length != 0) {
-        var story = $('.on_story .title .titleline > a');
+      var onStory = document.querySelector('.on_story');
+      if (onStory) {
+        var story = onStory.querySelector('.title .titleline > a');
         if (new_tab) {
-          $('.on_story .title').addClass("link-highlight");
-          window.open(story.attr("href"));
+          onStory.querySelector('.title').classList.add("link-highlight");
+          window.open(story.href);
         }
         else
-          window.location = story.attr("href");
+          window.location = story.href;
       }
     },
 
     view_comments: function(new_tab){
-      if ($('.on_story').length != 0) {
-        var comments = $('.on_story .comments');
-        if (comments.length != 0) {
+      var onStory = document.querySelector('.on_story');
+      if (onStory) {
+        var comments = onStory.querySelector('.comments');
+        if (comments) {
           if (new_tab)
-            window.open(comments.attr("href"));
+            window.open(comments.href);
           else
-            window.location = comments.attr("href");
+            window.location = comments.href;
         }
       }
     },
@@ -1987,26 +1986,28 @@ var HN = {
       var NO_HEAT = 50;
       var MILD    = 75;
       var MEDIUM  = 99;
-      $('.score').each(function(i){
-        var score = $(this).html();
+      document.querySelectorAll('.score').forEach(function(el){
+        var score = el.innerHTML;
 
         score = score.replace(/[a-z]/g, '');
 
         if (score < NO_HEAT) {
-          $(this).addClass('no-heat');
+          el.classList.add('no-heat');
         } else if (score < MILD) {
-          $(this).addClass('mild');
+          el.classList.add('mild');
         } else if (score < MEDIUM) {
-          $(this).addClass('medium');
+          el.classList.add('medium');
         } else {
-          $(this).addClass('hot');
+          el.classList.add('hot');
         };
       });
     },
 
     enableLinkHighlighting: function() {
-      $('.title a:link').click(function() {
-          $(this).closest('td').addClass('link-highlight');
+      document.querySelectorAll('.title a:link').forEach(function(a) {
+        a.addEventListener('click', function() {
+          this.closest('td').classList.add('link-highlight');
+        });
       });
     }
 }
