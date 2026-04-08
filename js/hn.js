@@ -1126,7 +1126,7 @@ var HN = {
         var selfPostRow = document.querySelector('.item-header tr:nth-child(3)');
         if (selfPostRow) {
           selfPostRow.classList.add('self-post-text');
-          $(selfPostRow).linkify();
+          linkifyElement(selfPostRow);
         }
 
         //fix spacing issue #86
@@ -1172,7 +1172,7 @@ var HN = {
         //other user pages
         var submittedLink = document.querySelector('#user-profile a[href^="submitted"]');
         if (submittedLink) submittedLink.parentElement.id = 'others-profile-submitted';
-        $(about.nextElementSibling).linkify();
+        linkifyElement(about.nextElementSibling);
       }
       else {
         //your user page

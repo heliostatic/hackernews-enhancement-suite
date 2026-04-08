@@ -139,3 +139,67 @@ describe('CommentTracker.process logic', () => {
     assert.equal(info.num, 42);
   });
 });
+
+// === Linkify regex logic (extracted from js/linkify.js) ===
+
+function linkifyText(text) {
+  var noProtocolUrl =
+    /(^|[\s(])(www\..+?\..+?)([.,;!?:)]*(?=\s|$))/g;
+  var httpOrMailtoUrl =
+    /(^|[\s(])((?:https?:\/\/|mailto:)\S+?)([.,;!?:)]*(?=\s|$))/g;
+  var html = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  return html
+    .replace(noProtocolUrl, '$1<a href="http://$2">$2</a>$3')
+    .replace(httpOrMailtoUrl, '$1<a href="$2">$2</a>$3');
+}
+
+describe('linkifyText', () => {
+  it('converts http URLs to links', () => {
+    assert.equal(
+      linkifyText('visit http://example.com today'),
+      'visit <a href="http://example.com">http://example.com</a> today'
+    );
+  });
+  it('converts https URLs to links', () => {
+    assert.equal(
+      linkifyText('see https://example.com/path'),
+      'see <a href="https://example.com/path">https://example.com/path</a>'
+    );
+  });
+  it('converts www URLs to links with http prefix', () => {
+    assert.equal(
+      linkifyText('go to www.example.com now'),
+      'go to <a href="http://www.example.com">www.example.com</a> now'
+    );
+  });
+  it('converts mailto URLs to links', () => {
+    assert.equal(
+      linkifyText('email mailto:test@example.com'),
+      'email <a href="mailto:test@example.com">mailto:test@example.com</a>'
+    );
+  });
+  it('leaves plain text unchanged', () => {
+    assert.equal(linkifyText('no links here'), 'no links here');
+  });
+  it('handles URL at start of string', () => {
+    assert.equal(
+      linkifyText('http://example.com is great'),
+      '<a href="http://example.com">http://example.com</a> is great'
+    );
+  });
+  it('handles URL at end of string', () => {
+    assert.equal(
+      linkifyText('visit http://example.com'),
+      'visit <a href="http://example.com">http://example.com</a>'
+    );
+  });
+  it('escapes HTML entities in text', () => {
+    assert.equal(
+      linkifyText('a < b & c > d'),
+      'a &lt; b &amp; c &gt; d'
+    );
+  });
+});
