@@ -1012,7 +1012,9 @@ var HN = {
       var loadingP = document.createElement('p');
       loadingP.id = 'loading_comments';
       loadingP.textContent = 'Loading comments';
-      below_header[1].parentNode.insertBefore(loadingP, below_header[1]);
+      if (below_header[1]) {
+        below_header[1].parentNode.insertBefore(loadingP, below_header[1]);
+      }
 
       if (pathname == "/item") {
         document.body.id = "item-body";
@@ -1862,6 +1864,7 @@ var HN = {
     rewriteNavigation: function() {
         var topselElem = document.querySelector('.topsel');
         var navigation = document.querySelector('td:nth-child(2) .pagetop');
+        if (!navigation) return;
         navigation.id = 'top-navigation';
 
         var visible_pages = [ ['top', '/news', 'Top stories'],
