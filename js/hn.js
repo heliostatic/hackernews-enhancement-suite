@@ -1447,85 +1447,114 @@ var HN = {
     },
 
     formatScore: function() {
-      $('.subtext').each(function(){
-        var $this = $(this);
-
-        var score = $this.find('span:first');
-        var as = $this.find('a');
-        var by = $this.find('a:eq(0)');
-        var at = $this.find('a:eq(1)');
+      document.querySelectorAll('.subtext').forEach(function(subtext){
+        var scoreSpan = subtext.querySelector('span');
+        var as = subtext.querySelectorAll('a');
+        var by = as[0];
+        var at = as[1];
         var comments;
 
-        if (score.length == 0)
-          score = $("<span/>").text('0');
-        else
-          score.text(parseInt(score.text()));
-        score.addClass("score").attr('title', 'Points');
+        var score;
+        if (!scoreSpan || scoreSpan.classList.contains('hnuser') ||
+            !scoreSpan.textContent.includes('point')) {
+          score = document.createElement('span');
+          score.textContent = '0';
+        } else {
+          score = scoreSpan;
+          score.textContent = parseInt(score.textContent);
+        }
+        score.classList.add('score');
+        score.title = 'Points';
 
-        if ($(as[as.length - 1]).text() != 'web') {
-          comments = $(as[as.length - 1]);
-        }
-        else {
-          comments = $('<a>-</a>');
-        }
-
-        comments_link = $(at).attr('href');
-
-        if (comments.text() == "discuss" || /ago$/.test(comments.text())) {
-          comments = $("<a/>").html('0')
-                              .attr('href', comments.attr('href'));
-        }
-        else if (comments.text() == "comments") {
-          comments = $("<a/>").html('?')
-                              .attr('href', comments.attr('href'));
-        }
-        else if (comments.text() == "") {
-          score.text('');
-        }
-        else {
-          comments.text(parseInt(comments.text()) || '-');
+        var lastA = as[as.length - 1];
+        if (lastA && lastA.textContent !== 'web') {
+          comments = lastA;
+        } else {
+          comments = document.createElement('a');
+          comments.textContent = '-';
         }
 
-        comments.attr('href', comments_link);
-        comments.addClass("comments")
-        comments.attr('title', 'Comments');
+        var comments_link = at ? at.getAttribute('href') : '';
+
+        if (comments.textContent === 'discuss' || /ago$/.test(comments.textContent)) {
+          var newComments = document.createElement('a');
+          newComments.textContent = '0';
+          newComments.href = comments.getAttribute('href') || '';
+          comments = newComments;
+        } else if (comments.textContent === 'comments') {
+          var newComments = document.createElement('a');
+          newComments.textContent = '?';
+          newComments.href = comments.getAttribute('href') || '';
+          comments = newComments;
+        } else if (comments.textContent === '') {
+          score.textContent = '';
+        } else {
+          comments.textContent = parseInt(comments.textContent) || '-';
+        }
+
+        if (comments_link) comments.setAttribute('href', comments_link);
+        comments.classList.add('comments');
+        comments.title = 'Comments';
 
         var by_el;
-        if (by.length == 0)
-          by_el = $("<span/>");
-        else
-          by_el = $('<span/>').addClass('submitter')
-                              .text('by ')
-                              .append(by.attr('title', 'View profile'));
+        if (!by) {
+          by_el = document.createElement('span');
+        } else {
+          by_el = document.createElement('span');
+          by_el.classList.add('submitter');
+          by_el.textContent = 'by ';
+          by.title = 'View profile';
+          by_el.appendChild(by);
+        }
 
-        var score_el = $('<td/>').append(score);
-        var comments_el = $('<td/>').append(comments);
-        var $prev = $this.parent().prev();
-        $prev.prepend(score_el);
-        $prev.prepend(comments_el);
-        $prev.find('.title').append(by_el);
-        $this.parent().next().remove();
-        $this.parent().remove();
+        var score_td = document.createElement('td');
+        score_td.appendChild(score);
+        var comments_td = document.createElement('td');
+        comments_td.appendChild(comments);
 
-        $('<span />').addClass('hnes-actions').append(
-            $this.find('a[href^=flag]'),
-            $this.find('a[href^=vouch]'),
-            $this.find('a[href^="https://hn.algolia.com/?query="]'),
-            $this.find('a[href^=hide]'),
-            $this.find('a[href^="https://www.google.com/search?q="]')
-        ).insertAfter(by_el);
+        var prevRow = subtext.parentElement.previousElementSibling;
+        prevRow.prepend(score_td);
+        prevRow.prepend(comments_td);
+        var titleEl = prevRow.querySelector('.title');
+        if (titleEl) titleEl.appendChild(by_el);
 
-        $('<span />').addClass('hnes-age').text(at.text()).insertAfter(by_el);
+        // Remove spacer row after subtext
+        var nextRow = subtext.parentElement.nextElementSibling;
+        if (nextRow) nextRow.remove();
+        subtext.parentElement.remove();
+
+        // Build hnes-actions span
+        var actions = document.createElement('span');
+        actions.classList.add('hnes-actions');
+        var actionSels = [
+          'a[href^=flag]', 'a[href^=vouch]',
+          'a[href^="https://hn.algolia.com/?query="]',
+          'a[href^=hide]',
+          'a[href^="https://www.google.com/search?q="]'
+        ];
+        actionSels.forEach(function(sel) {
+          var el = subtext.querySelector(sel);
+          if (el) actions.appendChild(el);
+        });
+        by_el.after(actions);
+
+        // Build hnes-age span
+        var ageSpan = document.createElement('span');
+        ageSpan.classList.add('hnes-age');
+        ageSpan.textContent = at ? at.textContent : '';
+        by_el.after(ageSpan);
       });
     },
 
     highlightCommentsLink: function(e) {
-      $(this).toggleClass('hover-comments-score')
-      $(this).next().toggleClass('hover-comments-score');
+      this.classList.toggle('hover-comments-score');
+      if (this.nextElementSibling)
+        this.nextElementSibling.classList.toggle('hover-comments-score');
     },
     highlightScoreLink: function(e) {
-      $(this).toggleClass('hover-comments-score')
-      $(this).prev().toggleClass('hover-comments-score');
+      this.classList.toggle('hover-comments-score');
+      if (this.previousElementSibling)
+        this.previousElementSibling.classList.toggle('hover-comments-score');
     },
 
     formatURL: function() {
