@@ -896,7 +896,7 @@ var HN = {
       $('.yclinks').parent('center').css({"width" : "100%"});
 
       var search_domain = "hn.algolia.com";
-      HN.setSearchInput($('input[name="q"]'), search_domain);
+      HN.setSearchInput(document.querySelector('input[name="q"]'), search_domain);
 
       var icon = $('img[src="y18.gif"]');
       icon.parent().attr({"href": "http://news.ycombinator.com/"});
@@ -1641,38 +1641,48 @@ var HN = {
     },
 
     rewriteUserNav: function(pagetop) {
-      var user_links = $('<span/>').addClass('nav-links');
-      var as = pagetop.find('a');
-      var user_profile = $(as[0]);
-      var logout = $(as[1]);
-      var user_name = user_profile.text();
+      // Normalize pagetop to a native DOM element
+      pagetop = pagetop instanceof HTMLElement ? pagetop : pagetop[0] || pagetop;
 
-      var user_drop = $('<span/>').append(
-                        $('<a/>').text(user_name)
-                                 .attr('href', '#')
-                      ).attr('title', 'Toggle user links')
-                      .attr('id', 'my-more-link')
-                      .addClass('more-arrow');
+      var user_links = document.createElement('span');
+      user_links.classList.add('nav-links');
+      var as = pagetop.querySelectorAll('a');
+      var user_profile = as[0];
+      var logout = as[1];
+      var user_name = user_profile.textContent;
 
-      logout.detach();
-      user_profile.detach();
-      var score_str = pagetop.text();
+      var user_drop = document.createElement('span');
+      var user_drop_a = document.createElement('a');
+      user_drop_a.textContent = user_name;
+      user_drop_a.href = '#';
+      user_drop.appendChild(user_drop_a);
+      user_drop.title = 'Toggle user links';
+      user_drop.id = 'my-more-link';
+      user_drop.classList.add('more-arrow');
+
+      logout.remove();
+      user_profile.remove();
+      var score_str = pagetop.textContent;
       var regex = /\(([^)]+)\)/;
       var matches = regex.exec(score_str);
       var score = matches[1];
 
-      var score_elem = $('<span/>').text('|')
-                                   .append(
-                                     $('<span/>').text(score)
-                                                 .attr('id', 'my-karma')
-                                                 .attr('title', 'Your karma')
-                                   );
-      user_links.append(score_elem);
-      pagetop.empty();
-      pagetop.append(user_links.prepend(user_drop));
+      var score_elem = document.createElement('span');
+      score_elem.appendChild(document.createTextNode('|'));
+      var karma_span = document.createElement('span');
+      karma_span.textContent = score;
+      karma_span.id = 'my-karma';
+      karma_span.title = 'Your karma';
+      score_elem.appendChild(karma_span);
 
-      var hidden_div = $('<div/>').attr('id', 'user-hidden')
-                                  .addClass('nav-drop-down');
+      user_links.appendChild(score_elem);
+      pagetop.replaceChildren();
+      user_links.insertBefore(user_drop, user_links.firstChild);
+      pagetop.appendChild(user_links);
+
+      var hidden_div = document.createElement('div');
+      hidden_div.id = 'user-hidden';
+      hidden_div.classList.add('nav-drop-down');
       var user_pages = [ ['profile', '/user', 'Your profile and settings'],
                          ['comments', '/threads', 'Your comments and replies'],
                          ['submitted', '/submitted', "Stories you've submitted"],
@@ -1684,15 +1694,18 @@ var HN = {
         var link_text = user_pages[i][0];
         var link_href = user_pages[i][1];
         var link_title = user_pages[i][2];
-        var link = $('<a/>').text(link_text)
-                            .attr('href', link_href + '?id=' + user_name)
-                            .attr('title', link_title);
+        var link = document.createElement('a');
+        link.textContent = link_text;
+        link.href = link_href + '?id=' + user_name;
+        link.title = link_title;
 
-        if (window.location.pathname == link_href)
-          new_active = link.clone().addClass('nav-active-link')
-                                   .addClass('new-active-link');
+        if (window.location.pathname == link_href) {
+          new_active = link.cloneNode(true);
+          new_active.classList.add('nav-active-link');
+          new_active.classList.add('new-active-link');
+        }
 
-        hidden_div.append(link);
+        hidden_div.appendChild(link);
       }
       if (new_active) {
         if (window.location.pathname != '/upvoted' || window.location.pathname != '/favorites') {
@@ -1701,49 +1714,56 @@ var HN = {
             user_id = 'Your';
           else
             user_id = user_id + "'s";
-          new_active.text(user_id + " " + new_active.text());
+          new_active.textContent = user_id + " " + new_active.textContent;
         }
-        $('#top-navigation .nav-links').append($('<span/>')
-                                       .text('|')
-                                       .append(new_active));
+        var nav_links = document.querySelector('#top-navigation .nav-links');
+        var active_span = document.createElement('span');
+        active_span.appendChild(document.createTextNode('|'));
+        active_span.appendChild(new_active);
+        nav_links.appendChild(active_span);
       }
 
-      hidden_div.append(
-        logout.attr('id', 'user-logout')
-              .attr('title', 'Logout')
-      );
-      user_links.append(hidden_div);
+      logout.id = 'user-logout';
+      logout.title = 'Logout';
+      hidden_div.appendChild(logout);
+      user_links.appendChild(hidden_div);
 
-      user_drop_toggle = function() {
-        user_drop.find('a').toggleClass('active')
-        hidden_div.toggle();
-      }
-      user_drop.click(user_drop_toggle);
-      hidden_div.click(user_drop_toggle);
-      hidden_div.hide();
+      var user_drop_toggle = function() {
+        user_drop.querySelector('a').classList.toggle('active');
+        hidden_div.style.display = hidden_div.style.display === 'none' ? '' : 'none';
+      };
+      user_drop.addEventListener('click', user_drop_toggle);
+      hidden_div.addEventListener('click', user_drop_toggle);
+      hidden_div.style.display = 'none';
 
       // HNES settings dropdown
-      var hnes_drop = $('<span/>').append(
-                        $('<a/>').text('HNES')
-                                 .attr('href', '#')
-                      ).attr('title', 'HNES settings')
-                      .attr('id', 'hnes-settings-link')
-                      .addClass('more-arrow');
-      var hnes_div = $('<div/>').attr('id', 'hnes-settings')
-                                .addClass('nav-drop-down');
+      var hnes_drop = document.createElement('span');
+      var hnes_drop_a = document.createElement('a');
+      hnes_drop_a.textContent = 'HNES';
+      hnes_drop_a.href = '#';
+      hnes_drop.appendChild(hnes_drop_a);
+      hnes_drop.title = 'HNES settings';
+      hnes_drop.id = 'hnes-settings-link';
+      hnes_drop.classList.add('more-arrow');
+
+      var hnes_div = document.createElement('div');
+      hnes_div.id = 'hnes-settings';
+      hnes_div.classList.add('nav-drop-down');
 
       // GitHub stars toggle
-      var ghToggle = $('<a/>').attr('href', '#')
-                              .addClass('hnes-gh-toggle');
+      var ghToggle = document.createElement('a');
+      ghToggle.href = '#';
+      ghToggle.classList.add('hnes-gh-toggle');
       chrome.runtime.sendMessage(
         { method: 'getLocalStorage', key: 'hnes_show_github_stars' },
         function(response) {
           var enabled = !(response && response.data === 'false');
-          ghToggle.text(enabled ? '★ GitHub stars' : '☆ GitHub stars');
-          ghToggle.toggleClass('hnes-gh-toggle-off', !enabled);
+          ghToggle.textContent = enabled ? '\u2605 GitHub stars' : '\u2606 GitHub stars';
+          if (!enabled) ghToggle.classList.add('hnes-gh-toggle-off');
+          else ghToggle.classList.remove('hnes-gh-toggle-off');
         }
       );
-      ghToggle.click(function(e) {
+      ghToggle.addEventListener('click', function(e) {
         e.preventDefault();
         e.stopPropagation();
         chrome.runtime.sendMessage(
@@ -1754,41 +1774,44 @@ var HN = {
             chrome.runtime.sendMessage(
               { method: 'setLocalStorage', key: 'hnes_show_github_stars', value: newVal },
               function() {
-                ghToggle.text(wasEnabled ? '☆ GitHub stars' : '★ GitHub stars');
-                ghToggle.toggleClass('hnes-gh-toggle-off', wasEnabled);
+                ghToggle.textContent = wasEnabled ? '\u2606 GitHub stars' : '\u2605 GitHub stars';
+                if (wasEnabled) ghToggle.classList.add('hnes-gh-toggle-off');
+                else ghToggle.classList.remove('hnes-gh-toggle-off');
                 if (!wasEnabled) {
                   HN._fetchAndDisplayStars();
                 } else {
-                  $('.hnes-gh-stars').remove();
+                  document.querySelectorAll('.hnes-gh-stars').forEach(function(el) { el.remove(); });
                 }
               }
             );
           }
         );
       });
-      hnes_div.append(ghToggle);
+      hnes_div.appendChild(ghToggle);
 
-      var hnes_sep = $('<span/>').text('|');
-      var hnes_wrapper = $('<span/>').attr('id', 'hnes-wrapper').append(hnes_drop).append(hnes_div);
-      user_links.prepend(hnes_sep);
-      user_links.prepend(hnes_wrapper);
+      var hnes_sep = document.createElement('span');
+      hnes_sep.textContent = '|';
+      var hnes_wrapper = document.createElement('span');
+      hnes_wrapper.id = 'hnes-wrapper';
+      hnes_wrapper.appendChild(hnes_drop);
+      hnes_wrapper.appendChild(hnes_div);
+      user_links.insertBefore(hnes_sep, user_links.firstChild);
+      user_links.insertBefore(hnes_wrapper, user_links.firstChild);
 
       var hnes_toggle = function() {
-        hnes_drop.find('a').toggleClass('active');
-        hnes_div.toggle();
+        hnes_drop.querySelector('a').classList.toggle('active');
+        hnes_div.style.display = hnes_div.style.display === 'none' ? '' : 'none';
       };
-      hnes_drop.click(hnes_toggle);
-      hnes_div.click(hnes_toggle);
-      hnes_div.hide();
+      hnes_drop.addEventListener('click', hnes_toggle);
+      hnes_div.addEventListener('click', hnes_toggle);
+      hnes_div.style.display = 'none';
 
       HN.setTopColor();
     },
     rewriteNavigation: function() {
-        var topsel = $('.topsel');
-        var more_nav = $('<div/>').attr('id', 'morenav')
-                                  .addClass('topsel');
-        var navigation = $('td:nth-child(2) .pagetop');
-        navigation.attr('id', 'top-navigation');
+        var topselElem = document.querySelector('.topsel');
+        var navigation = document.querySelector('td:nth-child(2) .pagetop');
+        navigation.id = 'top-navigation';
 
         var visible_pages = [ ['top', '/news', 'Top stories'],
                               ['new', '/newest', 'Newest stories'],
@@ -1808,103 +1831,137 @@ var HN = {
                              ['noobcomments', '/noobcomments', 'Comments by new users']
                            ];
 
-        if (topsel.length == 0) {
-          topsel = $('<span/>').addClass('nav-links');
-          navigation.append(topsel);
+        var topsel;
+        if (!topselElem) {
+          topsel = document.createElement('span');
+          topsel.classList.add('nav-links');
+          navigation.appendChild(topsel);
         }
         else {
-          topsel.removeClass('topsel').addClass('nav-links');
-          topsel.empty();
+          topsel = topselElem;
+          topsel.classList.remove('topsel');
+          topsel.classList.add('nav-links');
+          topsel.replaceChildren();
         }
         for (var i in visible_pages) {
           var link_text = visible_pages[i][0];
           var link_href = visible_pages[i][1];
 
-          var span = $('<span/>').text('|');
-          var new_link = $('<a/>').attr('href', link_href)
-                                  .text(link_text)
-                                  .addClass(link_text)
-                                  .attr('title', visible_pages[i][2]);
+          var span = document.createElement('span');
+          var new_link = document.createElement('a');
+          new_link.href = link_href;
+          new_link.textContent = link_text;
+          new_link.classList.add(link_text);
+          new_link.title = visible_pages[i][2];
 
           if (window.location.pathname == link_href)
-            new_link.addClass('nav-active-link')
+            new_link.classList.add('nav-active-link');
 
-          topsel.append(span.prepend(new_link));
+          span.appendChild(new_link);
+          span.appendChild(document.createTextNode('|'));
+          topsel.appendChild(span);
         }
-        if (window.location.pathname == '/')
-          $('.top').addClass('nav-active-link');
+        if (window.location.pathname == '/') {
+          var topLink = document.querySelector('.top');
+          if (topLink) topLink.classList.add('nav-active-link');
+        }
 
-        var more_link = $('<span/>').append($('<a/>')
-                                    .text('more')
-                                    .attr('href', '#'))
-                                    .attr('title', 'Toggle more links')
-                                    .attr('id', 'nav-more-link')
-                                    .addClass('more-arrow');
-        var hidden_div = $('<div/>').attr('id', 'nav-others')
-                                    .addClass('nav-drop-down');
+        var more_link = document.createElement('span');
+        var more_link_a = document.createElement('a');
+        more_link_a.textContent = 'more';
+        more_link_a.href = '#';
+        more_link.appendChild(more_link_a);
+        more_link.title = 'Toggle more links';
+        more_link.id = 'nav-more-link';
+        more_link.classList.add('more-arrow');
+
+        var hidden_div = document.createElement('div');
+        hidden_div.id = 'nav-others';
+        hidden_div.classList.add('nav-drop-down');
 
         var new_active = false;
         for (var i in hidden_pages) {
           var link_text = hidden_pages[i][0];
           var link_href = hidden_pages[i][1];
 
-          var new_link = $('<a/>').attr('href', link_href)
-                                  .attr('title', hidden_pages[i][2])
-                                  .text(link_text)
-                                  .addClass(link_text);
+          var new_link = document.createElement('a');
+          new_link.href = link_href;
+          new_link.title = hidden_pages[i][2];
+          new_link.textContent = link_text;
+          new_link.classList.add(link_text);
 
-          if (window.location.pathname == link_href)
-            new_active = new_link.clone().addClass('nav-active-link')
-                                         .addClass('new-active-link');
+          if (window.location.pathname == link_href) {
+            new_active = new_link.cloneNode(true);
+            new_active.classList.add('nav-active-link');
+            new_active.classList.add('new-active-link');
+          }
 
-          hidden_div.append(new_link);
+          hidden_div.appendChild(new_link);
         }
 
-        topsel.append(more_link).append(hidden_div);
+        topsel.appendChild(more_link);
+        topsel.appendChild(hidden_div);
 
-        if (new_active)
-          topsel.append($('<span/>').text('|').append(new_active));
-
-        navigation.empty().append(topsel);
-
-        toggle_more_link = function() {
-          more_link.find('a').toggleClass('active');
-          hidden_div.toggle();
+        if (new_active) {
+          var active_span = document.createElement('span');
+          active_span.appendChild(document.createTextNode('|'));
+          active_span.appendChild(new_active);
+          topsel.appendChild(active_span);
         }
-        more_link.click(toggle_more_link);
-        hidden_div.click(toggle_more_link);
 
-        hidden_div.offset({'left': more_link.position().left});
-        hidden_div.hide();
+        navigation.replaceChildren();
+        navigation.appendChild(topsel);
+
+        var toggle_more_link = function() {
+          more_link.querySelector('a').classList.toggle('active');
+          hidden_div.style.display = hidden_div.style.display === 'none' ? '' : 'none';
+        };
+        more_link.addEventListener('click', toggle_more_link);
+        hidden_div.addEventListener('click', toggle_more_link);
+
+        hidden_div.style.left = more_link.offsetLeft + 'px';
+        hidden_div.style.display = 'none';
     },
 
     toggleMoreNavLinks: function(e) {
-      var others = $('#nav-others');
-      others.toggle();
+      var others = document.getElementById('nav-others');
+      if (others) {
+        others.style.display = others.style.display === 'none' ? '' : 'none';
+      }
     },
 
     setTopColor: function(){
       var topcolor = document.getElementById("header").children[0].getAttribute("bgcolor");
       if(topcolor.toLowerCase() != '#ff6600') {
-        $('#header').css('background-color', topcolor);
-        $('.nav-drop-down').css('background-color', topcolor);
-        $('.nav-drop-down a:hover').css('background-color', topcolor);
+        document.getElementById('header').style.backgroundColor = topcolor;
+        document.querySelectorAll('.nav-drop-down').forEach(function(el) {
+          el.style.backgroundColor = topcolor;
+        });
+        // Inject a style rule for the hover state
+        var styleId = 'hnes-topcolor-style';
+        var existing = document.getElementById(styleId);
+        if (existing) existing.remove();
+        var style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = '.nav-drop-down a:hover { background-color: ' + topcolor + ' !important; }';
+        document.head.appendChild(style);
       }
     },
 
     setSearchInput: function(el, domain) {
+      if (!el) return;
       var text = "Search on " + domain;
-      $("input[name='q']").val(text);
-      el.focus(function(){
+      el.value = text;
+      el.addEventListener('focus', function(){
         HN.searchInputFocused = true;
-        if (el.val() == text) {
-          el.val("");
+        if (el.value == text) {
+          el.value = "";
         }
       });
-      el.blur(function(){
+      el.addEventListener('blur', function(){
         HN.searchInputFocused = false;
-        if (el.val() == "") {
-          el.val(text);
+        if (el.value == "") {
+          el.value = text;
         }
       });
     },
