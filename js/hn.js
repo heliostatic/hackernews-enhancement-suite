@@ -15,120 +15,6 @@
 * Under MIT license, see LICENSE
 */
 
-var InlineReply = {
-  init: function() {
-    $('a[href^="reply?"]').click(function(e) {
-      if (HN.isLoggedIn()) {
-        e.preventDefault();
-      }
-      else {
-        return;
-      }
-
-      //make sure there's no stray underlining between Reply and Cancel
-      $(this).addClass('underlined');
-      $(this).parent('u').replaceWith($(this));
-
-      /*remove the 'reply' link without actually hide()ing it because it
-        doesn't work that way with collapsible comments*/
-      $(this).css('display', 'none');
-
-      domain = window.location.origin;
-      link = domain + '/' + $(this).attr('href');
-
-      if ($(this).next().hasClass('reply_form')) {
-        $(this).next().show();
-      }
-      else {
-        //add buttons and box
-        $(this).after(
-          '<div class="reply_form"> \
-          <textarea rows="4" cols="60"/> \
-          <input type="submit" value="Reply" class="rbutton"/> \
-          <input type="submit" value="Cancel" class="cbutton"/> \
-          </div>'
-        );
-        $(this).parent().find('.rbutton').attr('data', link);
-      }
-    });
-
-    /* Reply button */
-    $('.rbutton').on('click', function(e) {
-      e.preventDefault();
-      link = $(this).attr('data');
-      text = $(this).prev().val();
-      //Hide cancel button and change reply text
-      $(this).next().hide();
-      $(this).attr("disabled","true");
-      $(this).attr("value","Posting...");
-      //Add loading spinner
-      image = $('<img style="vertical-align:middle;margin-left:5px;"/>');
-      image.attr('src', chrome.runtime.getURL("images/spin.gif"));
-      $(this).after(image);
-      //Post
-      InlineReply.postCommentTo(link, domain, text, $(this));
-    });
-
-    /* Cancel button */
-    $('.cbutton').on('click', function(e) {
-      InlineReply.hideButtonAndBox($(this).prev());
-    });
-  },
-
-  postCommentTo: function(link, domain, text, button) {
-    InlineReply.disableButtonAndBox(button);
-    $.ajax({
-      accepts: "text/html",
-      url: link
-    }).done(function(html) {
-      fnid = $(html).find('input[name="parent"]').attr('value');
-      whence = $(html).find('input[name="goto"]').attr('value');
-      hmac = $(html).find('input[name="hmac"]').attr('value');
-      InlineReply.sendComment(domain, fnid, whence, hmac, text);
-    }).fail(function(xhr, status, error) {
-      InlineReply.enableButtonAndBox(button);
-    });
-  },
-
-  sendComment: function(domain, fnidarg, whencearg, hmacarg, textarg) {
-    $.post(
-      domain + "/comment",
-      {'parent': fnidarg,
-       'goto': whencearg,
-       'hmac': hmacarg,
-       'text': textarg }
-    ).always(function(a) {
-      window.location.reload(true);
-    });
-  },
-
-  disableButtonAndBox: function(button) {
-    button.attr('disabled', 'disabled');
-    button.next().attr('disabled', 'disabled');
-    button.prev().attr('disabled', 'disabled');
-  },
-
-  enableButtonAndBox: function(button) {
-    button.removeAttr('disabled');
-    button.next().removeAttr('disabled');
-    button.prev().removeAttr('disabled');
-  },
-
-  hideButtonAndBox: function(button) {
-    var button_and_box = button.parent();
-    var reply_link = button_and_box.prev();
-    var textbox = button_and_box.find('textarea');
-    if (textbox.val().length > 0) {
-      reply_link.text("reply (saved)");
-    }
-    else {
-      reply_link.text("reply");
-    }
-    reply_link.css('display', 'inline')
-    button_and_box.hide();
-  }
-}
-
 var CommentTracker = {
   init: function() {
     var page_info = CommentTracker.getInfo();
@@ -714,9 +600,11 @@ var HN = {
         }
 
         //if user is logged in
-        var logout_elem = $('.pagetop a:contains(logout)');
-        if (logout_elem.length)
-          HN.rewriteUserNav(logout_elem.parent());
+        var logout_elem = Array.from(document.querySelectorAll('.pagetop a')).find(function(a) {
+          return a.textContent.includes('logout');
+        });
+        if (logout_elem)
+          HN.rewriteUserNav(logout_elem.parentElement);
 
         var pathname = window.location.pathname;
         //More link - can be post index, threads, comments, etc
@@ -763,22 +651,29 @@ var HN = {
           HN.doPostsList();
 
           function remove_first_tr() {
-            $("body #content td table tbody tr").filter(":first").remove();
+            var firstTr = document.querySelector('#content td table tbody tr');
+            if (firstTr) firstTr.remove();
           }
           if (pathname == '/jobs') {
-            $("body").attr("id", "jobs-body");
+            document.body.id = "jobs-body";
           }
           if (pathname == '/show' || pathname == '/jobs') {
             remove_first_tr();
-            var blurbRow = $("body #content td table tbody tr:not(.athing):first"),
-                blurb = blurbRow.find("td:last").html();
-            blurbRow.remove();
-            $("body #content table").before($("<p>").addClass("blurb").html(blurb));
+            var blurbRow = document.querySelector('#content td table tbody tr:not(.athing)');
+            var blurb = blurbRow ? blurbRow.querySelector('td:last-child') : null;
+            var blurbHtml = blurb ? blurb.innerHTML : '';
+            if (blurbRow) blurbRow.remove();
+            var blurbP = document.createElement('p');
+            blurbP.classList.add('blurb');
+            blurbP.innerHTML = blurbHtml;
+            var contentTable = document.querySelector('#content table');
+            if (contentTable) contentTable.before(blurbP);
           }
         }
         else if (pathname == '/edit') {
-          $("body").attr("id", "edit-body");
-          $("tr:nth-child(3) td td:first-child").remove();
+          document.body.id = "edit-body";
+          var editTd = document.querySelector("tr:nth-child(3) td td:first-child");
+          if (editTd) editTd.remove();
         }
         else if (pathname == '/item' ||
                  pathname == "/more" ||
@@ -789,7 +684,7 @@ var HN = {
           var morelink = document.querySelector('.morelink');
           if (morelink) {
             var morelink_href = morelink.href;
-            $('#content').after(morelink);
+            document.getElementById('content').after(morelink);
           }
 
           let storyIdResults = /id=(\w+)/.exec(window.location.search)
@@ -802,35 +697,32 @@ var HN = {
         }
         else if (pathname == '/favorites' ||
                  pathname == '/upvoted') {
-          $("td[colspan='2']").hide();
-          $(".votelinks").hide();
-          $(".ind").hide();
-          //HN.doCommentsList(pathname, track_comments);
+          document.querySelectorAll("td[colspan='2']").forEach(function(el) { el.style.display = 'none'; });
+          document.querySelectorAll(".votelinks").forEach(function(el) { el.style.display = 'none'; });
+          document.querySelectorAll(".ind").forEach(function(el) { el.style.display = 'none'; });
         }
         else if (pathname == '/threads') {
-          $("body").attr("id", "threads-body");
+          document.body.id = "threads-body";
 
           //create new table and try to emulate /item
-          var trs = $('body > center > table > tbody > tr');
+          var trs = Array.from(document.querySelectorAll('body > center > table > tbody > tr'));
           var comments = trs.slice(2, -1);
-          var newtable = $("<table/>").append($('<tbody/>').append(comments));
-          $(trs[1]).find('td').append(newtable);
+          var newtable = document.createElement('table');
+          var newtbody = document.createElement('tbody');
+          comments.forEach(function(c) { newtbody.appendChild(c); });
+          newtable.appendChild(newtbody);
+          var threadTd = trs[1].querySelector('td');
+          if (threadTd) threadTd.appendChild(newtable);
 
           var morelink = document.querySelector('.morelink');
           if (morelink) {
             var morelink_href = morelink.href;
-            newtable.parent().append(morelink);
+            if (threadTd) threadTd.appendChild(morelink);
           }
 
           HN.hnComments = new HNComments(0);
           HN.doCommentsList(pathname, track_comments);
         }
-/*        else if (pathname == '/newcomments' ||
-                 pathname == '/bestcomments' ||
-                 pathname == '/noobcomments' ) {
-          HN.addClassToCommenters();
-          HN.addInfoToUsers($('body'));
-        }*/
         else if (pathname == '/user') {
           HN.doUserProfile();
         }
@@ -849,12 +741,16 @@ var HN = {
         }
         else {
           //make sure More link is in correct place
-          $('.title:contains(More)').prev().attr('colspan', '1');
+          document.querySelectorAll('.title').forEach(function(el) {
+            if (el.textContent.includes('More') && el.previousElementSibling) {
+              el.previousElementSibling.setAttribute('colspan', '1');
+            }
+          });
         }
     },
 
     doPoll: function() {
-      $('body').attr('id', 'poll-body');
+      document.body.id = 'poll-body';
     },
 
     isLoginPage: function() {
@@ -871,44 +767,59 @@ var HN = {
     },
 
     initElements: function() {
-      var header = $('body > center > table > tbody > tr:first-child');
-      if (header.find('td').attr('bgcolor') === "#000000") {
-        //mourning
-        header = header.next();
-        header.prev().remove();
-        $('body').addClass('mourning');
-      }
-      header.attr('id', 'header');
+      var rows = document.querySelectorAll('body > center > table > tbody > tr');
+      var header = rows[0];
+      if (!header) return;
 
+      var headerTd = header.querySelector('td');
+      if (headerTd && headerTd.getAttribute('bgcolor') === '#000000') {
+        // mourning mode
+        var mourningRow = header;
+        header = rows[1];
+        mourningRow.remove();
+        document.body.classList.add('mourning');
+      }
+      header.id = 'header';
+
+      // Re-query rows after potential removal
+      var freshRows = document.querySelectorAll('body > center > table > tbody > tr');
       var contentIndex = 2;
-      if ($('body > center > table > tbody > tr').eq(1).has('.pagetop').length > 0) {
-        // There's an announcement underneath header
+      if (freshRows[1] && freshRows[1].querySelector('.pagetop')) {
         contentIndex++;
       }
 
-      var content = $('body > center > table > tbody > tr').eq(contentIndex);
-      content.attr('id', 'content');
+      if (freshRows[contentIndex]) {
+        freshRows[contentIndex].id = 'content';
+      }
 
-      //remove empty tr element between header and content
-      $('body > center > table > tbody > tr').eq(contentIndex - 1).remove();
+      // Remove empty tr between header and content
+      if (freshRows[contentIndex - 1]) {
+        freshRows[contentIndex - 1].remove();
+      }
 
-      $('#header table td').removeAttr('style');
+      var headerTableTd = document.querySelector('#header table td');
+      if (headerTableTd) headerTableTd.removeAttribute('style');
 
-      $('tr:last-child .title').attr('id', 'more');
-      //$('.title a[rel="nofollow"]:contains(More)').parent().attr('id', 'more');
-      //$('.title a[href="news2"]').parent().attr('id', 'more');
+      var lastTitle = document.querySelector('tr:last-child .title');
+      if (lastTitle) lastTitle.id = 'more';
 
-      $('tr[style="height:7px"]').remove();
-      $('tr[style="height:2px"]').remove();
+      document.querySelectorAll('tr[style="height:7px"]').forEach(function(el) { el.remove(); });
+      document.querySelectorAll('tr[style="height:2px"]').forEach(function(el) { el.remove(); });
 
-      $('.yclinks').parent('center').css({"width" : "100%"});
+      var yclinks = document.querySelector('.yclinks');
+      if (yclinks) {
+        var centerEl = yclinks.closest('center');
+        if (centerEl) centerEl.style.width = '100%';
+      }
 
       var search_domain = "hn.algolia.com";
       HN.setSearchInput(document.querySelector('input[name="q"]'), search_domain);
 
-      var icon = $('img[src="y18.gif"]');
-      icon.parent().attr({"href": "http://news.ycombinator.com/"});
-      icon.attr('title', 'Hacker News');
+      var icon = document.querySelector('img[src="y18.gif"]');
+      if (icon) {
+        if (icon.parentElement) icon.parentElement.href = 'http://news.ycombinator.com/';
+        icon.title = 'Hacker News';
+      }
     },
 
     injectCSS: function() {
@@ -1086,15 +997,7 @@ var HN = {
       HN.replaceVoteButtons(true);
     },
 
-    /*addClassToCommenters: function() {
-      //add class to comment author
-      var commenters = $(".comhead a[href*=user]");
-      commenters.addClass('commenter');
-    },*/
-
     doCommentsList: function(pathname, track_comments) {
-//      InlineReply.init();
-      //HN.addClassToCommenters();
 
       //add classes to comment page header (OP post) and the table containing all the comments
       var comments;
@@ -1360,8 +1263,7 @@ var HN = {
     },
 
     loadMoreLink: function(elem) {
-      // elem may be a native element or jQuery object
-      if (!elem || (elem.length !== undefined && elem.length == 0)) {
+      if (!elem) {
         HN.doAfterCommentsLoad();
         return;
       }
@@ -1371,7 +1273,7 @@ var HN = {
         loading_comments.textContent += '.';
       }
 
-      var moreurl = elem.getAttribute ? elem.getAttribute('href') : elem.href;
+      var moreurl = elem.getAttribute('href') || elem.href;
       fetch(moreurl).then(function(r) { return r.text(); }).then(function(html) {
         var doc = new DOMParser().parseFromString(html, 'text/html');
         var rows = doc.querySelectorAll('center > table > tbody > tr:nth-child(3) > td > table > tbody > tr');
@@ -1788,8 +1690,6 @@ var HN = {
     },
 
     rewriteUserNav: function(pagetop) {
-      // Normalize pagetop to a native DOM element
-      pagetop = pagetop instanceof HTMLElement ? pagetop : pagetop[0] || pagetop;
 
       var user_links = document.createElement('span');
       user_links.classList.add('nav-links');
@@ -2248,27 +2148,40 @@ var HN = {
 
 //show new comment count on hckrnews.com
 if (window.location.host == "hckrnews.com") {
-  $('ul.entries li').each(function() {
-    chrome.runtime.sendMessage({method: "getLocalStorage", key: Number($(this).attr('id'))}, function(response) {
-      if (response.data != undefined) {
-        var data = JSON.parse(response.data);
-        var id = data.id;
-        var num = data.num ? data.num : 0;
-        var now = Number($('#'+id).find('.comments').text());
-        var unread = Math.max(now - num, 0);
-        var prepend = unread == 0 ? "" + unread + " / " : "<span>"+unread+"</span> / ";
-        $(document).ready(function() {
-          $('#'+id).find('.comments').prepend(prepend);
-        });
+  document.querySelectorAll('ul.entries li').forEach(function(li) {
+    var liId = li.getAttribute('id');
+    chrome.runtime.sendMessage(
+      {method: "getLocalStorage", key: Number(liId)},
+      function(response) {
+        if (response.data != undefined) {
+          var data = JSON.parse(response.data);
+          var id = data.id;
+          var num = data.num ? data.num : 0;
+          var el = document.getElementById(String(id));
+          if (!el) return;
+          var commentsLink = el.querySelector('.comments');
+          if (!commentsLink) return;
+          var now = Number(commentsLink.textContent);
+          var unread = Math.max(now - num, 0);
+          var prepend = unread == 0
+            ? "" + unread + " / "
+            : "<span>" + unread + "</span> / ";
+          commentsLink.insertAdjacentHTML('afterbegin', prepend);
+        }
       }
-    });
+    );
   });
 }
 else {
   HN.init();
 
-  $(document).ready(function(){
-    if ("Unknown or expired link." == $('body').html()) {
+  function onReady(fn) {
+    if (document.readyState !== 'loading') fn();
+    else document.addEventListener('DOMContentLoaded', fn);
+  }
+
+  onReady(function(){
+    if ("Unknown or expired link." == document.body.innerHTML) {
       HN.setLocalStorage('expired', true);
       window.location.replace("/");
       return;
@@ -2278,14 +2191,20 @@ else {
         if (response.data != undefined) {
           var expired = JSON.parse(response.data);
           if (expired) {
-            $('#header').after("<p id=\"alert\">You reached an <a href=\"//news.ycombinator.com/item?id=17705\" title=\"what?\">expired page</a> and have been redirected back to the front page.</p>");
+            var alertP = document.createElement('p');
+            alertP.id = 'alert';
+            alertP.innerHTML =
+              'You reached an <a href="//news.ycombinator.com/' +
+              'item?id=17705" title="what?">expired page</a>' +
+              ' and have been redirected back to the front page.';
+            var header = document.getElementById('header');
+            if (header) header.after(alertP);
             HN.setLocalStorage('expired', false);
           }
         }
       });
     }
 
-    //redirect to profile page after updating it
     if (window.location.pathname == "/x") {
       HN.getLocalStorage('update_profile', function(response) {
         if (response.data != undefined && response.data != "false") {
@@ -2295,6 +2214,6 @@ else {
       });
     }
 
-    $('body').css('visibility', 'visible');
+    document.body.style.visibility = 'visible';
   });
 }
