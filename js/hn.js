@@ -1710,7 +1710,9 @@ var HN = {
       user_drop.classList.add('more-arrow');
 
       logout.remove();
-      user_profile.remove();
+      // Keep a hidden user link so HACKERSMACKER can find the logged-in user
+      // via its '.pagetop a[href^=user]' selector
+      user_profile.style.display = 'none';
       var score_str = pagetop.textContent;
       var regex = /\(([^)]+)\)/;
       var matches = regex.exec(score_str);
