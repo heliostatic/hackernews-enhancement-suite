@@ -1779,7 +1779,7 @@ var HN = {
 
       var user_drop_toggle = function() {
         user_drop.querySelector('a').classList.toggle('active');
-        hidden_div.style.display = hidden_div.style.display === 'none' ? '' : 'none';
+        hidden_div.style.display = hidden_div.style.display === 'none' ? 'block' : 'none';
       };
       user_drop.addEventListener('click', user_drop_toggle);
       hidden_div.addEventListener('click', user_drop_toggle);
@@ -1849,7 +1849,7 @@ var HN = {
 
       var hnes_toggle = function() {
         hnes_drop.querySelector('a').classList.toggle('active');
-        hnes_div.style.display = hnes_div.style.display === 'none' ? '' : 'none';
+        hnes_div.style.display = hnes_div.style.display === 'none' ? 'block' : 'none';
       };
       hnes_drop.addEventListener('click', hnes_toggle);
       hnes_div.addEventListener('click', hnes_toggle);
@@ -1963,7 +1963,7 @@ var HN = {
 
         var toggle_more_link = function() {
           more_link.querySelector('a').classList.toggle('active');
-          hidden_div.style.display = hidden_div.style.display === 'none' ? '' : 'none';
+          hidden_div.style.display = hidden_div.style.display === 'none' ? 'block' : 'none';
         };
         more_link.addEventListener('click', toggle_more_link);
         hidden_div.addEventListener('click', toggle_more_link);
@@ -1975,7 +1975,7 @@ var HN = {
     toggleMoreNavLinks: function(e) {
       var others = document.getElementById('nav-others');
       if (others) {
-        others.style.display = others.style.display === 'none' ? '' : 'none';
+        others.style.display = others.style.display === 'none' ? 'block' : 'none';
       }
     },
 
