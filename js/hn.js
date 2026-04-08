@@ -1732,6 +1732,8 @@ var HN = {
       pagetop.replaceChildren();
       user_links.insertBefore(user_drop, user_links.firstChild);
       pagetop.appendChild(user_links);
+      // Re-append hidden user link for HACKERSMACKER compat
+      pagetop.appendChild(user_profile);
 
       var hidden_div = document.createElement('div');
       hidden_div.id = 'user-hidden';
