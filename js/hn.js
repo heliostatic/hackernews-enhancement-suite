@@ -854,12 +854,16 @@ var HN = {
     },
 
     isLoginPage: function() {
-      return ($("b:contains('Login')").length > 0);
+      return Array.from(document.querySelectorAll('b')).some(function(el) {
+        return el.textContent === 'Login';
+      });
     },
 
     isLoggedIn: function() {
-      var logout_elem = $('.pagetop a:contains(logout)');
-      return (logout_elem.length > 0 ? true : false);
+      var links = document.querySelectorAll('.pagetop a');
+      return Array.from(links).some(function(a) {
+        return a.textContent.toLowerCase() === 'logout';
+      });
     },
 
     initElements: function() {
@@ -935,48 +939,90 @@ var HN = {
     },
 
     doLogin: function() {
-      $('body').attr('id', 'login-body');
+      document.body.id = 'login-body';
       document.title = "Login | Hacker News";
 
       HN.injectCSS();
 
       // save and remove (to be re-added later) any rogue messages outside of any tag (e.g. "Bad login.")
-      var rogue_messages = $('body').contents().filter(function(){ return this.nodeType == 3; });
-      var message = rogue_messages.text().trim();
-      rogue_messages.remove();
+      var messageText = '';
+      Array.from(document.body.childNodes).forEach(function(node) {
+        if (node.nodeType === 3) {
+          messageText += node.textContent;
+          node.remove();
+        }
+      });
+      var message = messageText.trim();
 
-      var recover_password_link = $('body > a');
-      if (recover_password_link.length > 0)
+      var recover_password_link = document.querySelector('body > a');
+      if (recover_password_link)
         recover_password_link.remove();
 
       // remove login header, submit button (will be re-added later)
-      $('body > b:first').remove();
-      var buttonHtml = $('form input[type="submit"]').get(0).outerHTML;
-      $('form:first input[type=submit]').remove();
+      var firstB = document.querySelector('body > b');
+      if (firstB) firstB.remove();
+      var submitBtn = document.querySelector('form input[type="submit"]');
+      var buttonHtml = submitBtn.outerHTML;
+      submitBtn.remove();
 
       var headerHtml = '<tr id="header"><td bgcolor="#ff6600"><table border="0" cellpadding="0" cellspacing="0" width="100%" style="padding:2px"><tbody><tr><td><a href="http://ycombinator.com"><img src="y18.gif" width="18" height="18" style="border:1px #ffffff solid;"></a></td><td><span class="pagetop" id="top-navigation"><span class="nav-links"><span><a href="/news" class="top" title="Top stories">top</a>|</span><span><a href="/newest" class="new" title="Newest stories">new</a>|</span><span><a href="/best" class="best" title="Best stories">best</a></span></div></span></span></td></tr></tbody></table></td></tr>';
 
       // wrap content into a table
-      $('body > form:first').attr('id', 'login-form');
-      $('#login-form').wrap('<tr id="content"><td></td></tr>');
-      $('tr#content').wrap('<table border="0" cellpadding="0" cellspacing="0" width="85%"></table>');
+      var loginForm = document.querySelector('body > form');
+      loginForm.id = 'login-form';
 
-      // add header table row and submit button row
-      $('tr#content').before(headerHtml);
-      $('#login-form tr:last').after('<tr><td></td><td>' + buttonHtml + '</td></tr>');
+      // build: <center><table><tbody><tr id="header">...</tr><tr id="content"><td><form...></td></tr></tbody></table></center>
+      var contentTd = document.createElement('td');
+      contentTd.appendChild(loginForm);
 
-      $('table').wrap('<center></center>');
-      $('#login-form').before('<h1>Login</h1>');
+      var contentTr = document.createElement('tr');
+      contentTr.id = 'content';
+      contentTr.appendChild(contentTd);
 
-      if (recover_password_link.length > 0)
-        $('#login-form').before(recover_password_link);
+      var tbody = document.createElement('tbody');
+      tbody.innerHTML = headerHtml;
+      tbody.appendChild(contentTr);
+
+      var table = document.createElement('table');
+      table.setAttribute('border', '0');
+      table.setAttribute('cellpadding', '0');
+      table.setAttribute('cellspacing', '0');
+      table.setAttribute('width', '85%');
+      table.appendChild(tbody);
+
+      var center = document.createElement('center');
+      center.appendChild(table);
+
+      document.body.appendChild(center);
+
+      // add submit button row after last row of login-form
+      var loginFormLastRow = document.querySelector('#login-form tr:last-child');
+      var buttonRow = document.createElement('tr');
+      buttonRow.innerHTML = '<td></td><td>' + buttonHtml + '</td>';
+      loginFormLastRow.parentNode.insertBefore(buttonRow, loginFormLastRow.nextSibling);
+
+      // add h1 before login-form
+      var h1 = document.createElement('h1');
+      h1.textContent = 'Login';
+      loginForm.parentNode.insertBefore(h1, loginForm);
+
+      if (recover_password_link)
+        loginForm.parentNode.insertBefore(recover_password_link, loginForm);
 
       // re-add rogue messages previously removed
-      if (message)
-        $('tr#content > td:first > h1').before(' <p id="login-msg">' + message + '</p>');
+      if (message) {
+        var msgP = document.createElement('p');
+        msgP.id = 'login-msg';
+        msgP.textContent = message;
+        var contentH1 = document.querySelector('tr#content > td:first-child > h1');
+        contentH1.parentNode.insertBefore(msgP, contentH1);
+      }
 
       // register?
-      if ($("b:contains('Create Account')").length > 0) {
+      var hasCreateAccount = Array.from(document.querySelectorAll('b')).some(function(el) {
+        return el.textContent === 'Create Account';
+      });
+      if (hasCreateAccount) {
         HN.doCreateAccount();
       }
     },
@@ -984,22 +1030,34 @@ var HN = {
     doCreateAccount: function() {
       // first check if doLogin() has already built a login prompt,
       // then check if there is another form present (e.g. Create Account)
-      if ($('body#login-body').length == 0) return;
-      if ($('body > form').length == 0) return;
+      if (document.body.id !== 'login-body') return;
+      if (!document.querySelector('body > form')) return;
 
       // save and remove title/form
-      var formTitle = $('body > b').text();
-      $('body > b').remove();
-      $('body > form').attr('id', 'register-form');
-      var formContent = $('#register-form').get(0).outerHTML;
-      $('#register-form').remove();
+      var bodyB = document.querySelector('body > b');
+      if (bodyB) bodyB.remove();
+      var registerForm = document.querySelector('body > form');
+      registerForm.id = 'register-form';
+      var formContent = registerForm.outerHTML;
+      registerForm.remove();
 
       // rebuild title/form inside the existing table
-      $('tr#content > td:last').append(formContent);
-      var buttonHtml = $('#register-form > input[type="submit"]').get(0).outerHTML;
-      $('#register-form > input[type="submit"]').remove();
-      $('#register-form tr:last').after('<tr><td></td><td>' + buttonHtml + '</td></tr>');
-      $('#register-form').before('<h1>Create Account</h1>');
+      var contentTdLast = document.querySelector('tr#content > td:last-child');
+      contentTdLast.insertAdjacentHTML('beforeend', formContent);
+
+      var regForm = document.getElementById('register-form');
+      var regSubmitBtn = regForm.querySelector('input[type="submit"]');
+      var buttonHtml = regSubmitBtn.outerHTML;
+      regSubmitBtn.remove();
+
+      var regLastRow = regForm.querySelector('tr:last-child');
+      var buttonRow = document.createElement('tr');
+      buttonRow.innerHTML = '<td></td><td>' + buttonHtml + '</td>';
+      regLastRow.parentNode.insertBefore(buttonRow, regLastRow.nextSibling);
+
+      var h1 = document.createElement('h1');
+      h1.textContent = 'Create Account';
+      regForm.parentNode.insertBefore(h1, regForm);
     },
 
     doPostsList: function() {
