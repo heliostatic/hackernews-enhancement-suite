@@ -1712,7 +1712,7 @@ var HN = {
       var score_str = pagetop.textContent;
       var regex = /\(([^)]+)\)/;
       var matches = regex.exec(score_str);
-      var score = matches[1];
+      var score = matches ? matches[1] : '0';
 
       var score_elem = document.createElement('span');
       score_elem.appendChild(document.createTextNode('|'));
