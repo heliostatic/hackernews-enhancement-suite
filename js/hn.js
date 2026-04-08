@@ -165,7 +165,7 @@ class HNComments {
                   <a class="unvoter unvote" title="Unvote"></a>
                   <a class="collapser" title="Toggle collapse"></a>
                   <span class="score"></span>
-                  <span class="author">
+                  <span class="author default">
                     <a href="" title="User profile"></a>
                     <span class="hnes-user-score-cont noscore" title="User score">(<span class="hnes-user-score"></span>)</span>
                     <span class="hnes-tag-cont">
