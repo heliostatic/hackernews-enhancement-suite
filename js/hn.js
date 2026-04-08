@@ -1003,7 +1003,7 @@ var HN = {
     },
 
     doPostsList: function() {
-      $("body").attr("id", "index-body");
+      document.body.id = 'index-body';
 
       HN.init_keys();
 
@@ -1558,18 +1558,20 @@ var HN = {
     },
 
     formatURL: function() {
-        $('.comhead').each(function() {
-          var url_el = $('<span/>').text(
-                         $(this).text().substring(2, $(this).text().length - 1)
-                       );
-          var left_paren = $('<span/>').addClass('paren')
-                                       .text('(');
-          var right_paren = $('<span/>').addClass('paren')
-                                        .text(')');
-          $(this).text('');
-          $(this).append(left_paren)
-                 .append(url_el)
-                 .append(right_paren);
+        document.querySelectorAll('.comhead').forEach(function(el) {
+          var text = el.textContent;
+          var url_el = document.createElement('span');
+          url_el.textContent = text.substring(2, text.length - 1);
+          var left_paren = document.createElement('span');
+          left_paren.className = 'paren';
+          left_paren.textContent = '(';
+          var right_paren = document.createElement('span');
+          right_paren.className = 'paren';
+          right_paren.textContent = ')';
+          el.textContent = '';
+          el.appendChild(left_paren);
+          el.appendChild(url_el);
+          el.appendChild(right_paren);
         });
     },
 
@@ -1587,14 +1589,14 @@ var HN = {
       var ghLinks = {};
       var ghPattern = /^https?:\/\/github\.com\/([^\/]+\/[^\/]+)\/?/;
 
-      $('.title a:not(.comments)').each(function() {
-        var href = $(this).attr('href');
+      document.querySelectorAll('.title a:not(.comments)').forEach(function(el) {
+        var href = el.getAttribute('href');
         if (!href) return;
         var match = ghPattern.exec(href);
         if (match) {
           var repo = match[1].replace(/\.git$/, '');
           ghLinks[repo] = ghLinks[repo] || [];
-          ghLinks[repo].push($(this));
+          ghLinks[repo].push(el);
         }
       });
 
@@ -1610,13 +1612,13 @@ var HN = {
             var els = ghLinks[repo];
             if (!els) continue;
             for (var i = 0; i < els.length; i++) {
-              var badge = $('<a/>')
-                .addClass('hnes-gh-stars')
-                .attr('href', 'https://github.com/' + repo)
-                .attr('target', '_blank')
-                .attr('title', stars.toLocaleString() + ' stars on GitHub')
-                .html('<svg class="hnes-gh-icon" viewBox="0 0 16 16" width="12" height="12"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> ' + HN._formatStarCount(stars));
-              els[i].closest('td').find('.comhead').after(badge);
+              var badge = document.createElement('a');
+              badge.className = 'hnes-gh-stars';
+              badge.href = 'https://github.com/' + repo;
+              badge.target = '_blank';
+              badge.title = stars.toLocaleString() + ' stars on GitHub';
+              badge.innerHTML = '<svg class="hnes-gh-icon" viewBox="0 0 16 16" width="12" height="12"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> ' + HN._formatStarCount(stars);
+              els[i].closest('td').querySelector('.comhead').after(badge);
             }
           }
         }
@@ -1630,14 +1632,22 @@ var HN = {
     },
 
     moveMoreLink: function() {
-      $('#more').prev().attr('colspan', '3');
+      var more = document.getElementById('more');
+      if (more && more.previousElementSibling) {
+        more.previousElementSibling.setAttribute('colspan', '3');
+      }
     },
     removeUpvotes: function() {
-      var titles = $('.title');
-      if ($(titles[titles.length - 1]).attr('id') == "more")
-        $('.title').slice(0, -1).siblings().remove();
-      else
-        $('.title').siblings().remove();
+      var titles = document.querySelectorAll('.title');
+      var titleArr = Array.prototype.slice.call(titles);
+      var hasMore = titleArr.length > 0 && titleArr[titleArr.length - 1].id === 'more';
+      var toProcess = hasMore ? titleArr.slice(0, -1) : titleArr;
+      toProcess.forEach(function(el) {
+        var parent = el.parentNode;
+        Array.prototype.slice.call(parent.children).forEach(function(child) {
+          if (child !== el) child.remove();
+        });
+      });
     },
 
     rewriteUserNav: function(pagetop) {
