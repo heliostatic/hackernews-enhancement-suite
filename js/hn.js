@@ -1046,6 +1046,8 @@ var HN = {
         //recursively load more pages on closed thread
         if (more) {
           HN.loadMoreLink(more);
+        } else {
+          HN.doAfterCommentsLoad();
         }
       }
       else {// if (pathname == "/threads") {
