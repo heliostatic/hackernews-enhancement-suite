@@ -1090,48 +1090,55 @@ var HN = {
     },
 
     doUserProfile: function() {
-      $('#content > td').attr('id', 'user-profile');
+      document.querySelector('#content > td').id = 'user-profile';
 
-      var options = $('tr > td[valign="top"]');
+      var options = document.querySelectorAll('tr > td[valign="top"]');
       var user = options[0];
-      var created = $(options[1]);
-      var karma = $(options[2]);
-      var about = $(options[3]);
+      var created = options[1];
+      var karma = options[2];
+      var about = options[3];
 
       if (options.length === 4) {
         //other user pages
-        $('#user-profile a[href^="submitted"]').parent().attr('id', 'others-profile-submitted');
-        about.next().linkify();
+        var submittedLink = document.querySelector('#user-profile a[href^="submitted"]');
+        if (submittedLink) submittedLink.parentElement.id = 'others-profile-submitted';
+        $(about.nextElementSibling).linkify();
       }
       else {
         //your user page
-        $('#user-profile').addClass('your-profile');
-        var email = $(options[4]);
-        var showdead = $(options[5]);
-        var noprocrast = $(options[6]);
-        var maxvisit = $(options[7]);
-        var minaway = $(options[8]);
+        document.getElementById('user-profile').classList.add('your-profile');
+        var email = options[4];
+        var showdead = options[5];
+        var noprocrast = options[6];
+        var maxvisit = options[7];
+        var minaway = options[8];
         var delay;
-        if($('tr > td[valign="top"]:contains("topcolor:")').length) {
-          var topcolor = $(options[9]);
-          topcolor.addClass('select-option');
-          topcolor.next().append($('<span>Default: ff6600</span>'));
-          delay = $(options[10]);
+        var hasTopcolor = Array.from(options).some(function(td) {
+          return td.textContent.indexOf('topcolor:') !== -1;
+        });
+        if (hasTopcolor) {
+          var topcolor = options[9];
+          topcolor.classList.add('select-option');
+          var topcolorSpan = document.createElement('span');
+          topcolorSpan.textContent = 'Default: ff6600';
+          topcolor.nextElementSibling.appendChild(topcolorSpan);
+          delay = options[10];
         }
         else {
-          delay = $(options[11]);
+          delay = options[11];
         }
 
         //fix spacing
-        email.addClass('select-option');
-        showdead.addClass('select-option');
-        noprocrast.addClass('select-option');
-        maxvisit.addClass('select-option');
-        minaway.addClass('select-option');
-        delay.addClass('select-option');
-        $('#user-profile a[href="changepw"]').parent().attr('id', 'your-profile-change-password');
+        email.classList.add('select-option');
+        showdead.classList.add('select-option');
+        noprocrast.classList.add('select-option');
+        maxvisit.classList.add('select-option');
+        minaway.classList.add('select-option');
+        delay.classList.add('select-option');
+        var changePwLink = document.querySelector('#user-profile a[href="changepw"]');
+        if (changePwLink) changePwLink.parentElement.id = 'your-profile-change-password';
 
-        var current_karma = parseInt(karma.next().text());
+        var current_karma = parseInt(karma.nextElementSibling.textContent);
         var karma_for_flag = 21;
         var karma_for_polls = 201;
         var karma_for_downvotes = 501;
@@ -1139,64 +1146,97 @@ var HN = {
         var can_create_polls_msg;
         var can_downvote_msg;
         if (current_karma < karma_for_flag) {
-          can_flag_msg = $('<p>You need ' + (karma_for_flag - current_karma) + ' more karma until you can flag posts.</p>');
+          can_flag_msg = document.createElement('p');
+          can_flag_msg.textContent = 'You need ' + (karma_for_flag - current_karma) + ' more karma until you can flag posts.';
         }
         else {
-          can_flag_msg = $('<p>You can flag posts.</p>');
+          can_flag_msg = document.createElement('p');
+          can_flag_msg.textContent = 'You can flag posts.';
         }
         if (current_karma < karma_for_polls) {
-          can_create_polls_msg = $('<p>You need ' + (karma_for_polls - current_karma) + ' more karma until you can create a poll.</p>');
+          can_create_polls_msg = document.createElement('p');
+          can_create_polls_msg.textContent = 'You need ' + (karma_for_polls - current_karma) + ' more karma until you can create a poll.';
         }
         else {
-          can_create_polls_msg = $('<p>You can <a href="//news.ycombinator.com/newpoll">create a poll</a>.</p>');
+          can_create_polls_msg = document.createElement('p');
+          can_create_polls_msg.innerHTML = 'You can <a href="//news.ycombinator.com/newpoll">create a poll</a>.';
         }
         if (current_karma < karma_for_downvotes) {
-          can_downvote_msg = $('<p>You need ' + (karma_for_downvotes - current_karma) + ' more karma until you can downvote comments.</p>');
+          can_downvote_msg = document.createElement('p');
+          can_downvote_msg.textContent = 'You need ' + (karma_for_downvotes - current_karma) + ' more karma until you can downvote comments.';
         }
         else {
-          can_downvote_msg = $('<p>You can downvote comments.</p>');
+          can_downvote_msg = document.createElement('p');
+          can_downvote_msg.textContent = 'You can downvote comments.';
         }
-        karma.next().append(can_flag_msg).append(can_create_polls_msg).append(can_downvote_msg);
+        var karmaNext = karma.nextElementSibling;
+        karmaNext.appendChild(can_flag_msg);
+        karmaNext.appendChild(can_create_polls_msg);
+        karmaNext.appendChild(can_downvote_msg);
 
-        var about_help = about.next().find('a[href="formatdoc"]');
-        about_help.click(function(e) {
+        var aboutNext = about.nextElementSibling;
+        var about_help = aboutNext.querySelector('a[href="formatdoc"]');
+        about_help.addEventListener('click', function(e) {
           e.preventDefault();
-          var input_help = about.next().find('.input-help');
-          if (input_help.length) {
+          var input_help = aboutNext.querySelector('.input-help');
+          if (input_help) {
             input_help.remove();
           }
           else {
-            about.next().append(HN.getFormattingHelp(false));
+            aboutNext.appendChild(HN.getFormattingHelp(false));
           }
         });
 
-        var dead_explanation = $('<p>Showdead allows you to see all the submissions and comments that have been killed by the editors.</p>');
-        showdead.next().append($('<span>Default: no</span>')).append(dead_explanation);
+        var dead_explanation = document.createElement('p');
+        dead_explanation.textContent = 'Showdead allows you to see all the submissions and comments that have been killed by the editors.';
+        var showdeadNext = showdead.nextElementSibling;
+        var showdeadSpan = document.createElement('span');
+        showdeadSpan.textContent = 'Default: no';
+        showdeadNext.appendChild(showdeadSpan);
+        showdeadNext.appendChild(dead_explanation);
 
-        var noprocrast_explanation = $('<p>Noprocast is a way to prevent yourself from spending too much time on Hacker News. If you turn it on you\'ll only be allowed to visit the site for maxvisit minutes at a time, with gaps of minaway minutes in between.</p>');
-        noprocrast.next().append($('<span>Default: no</span>')).append(noprocrast_explanation);
+        var noprocrast_explanation = document.createElement('p');
+        noprocrast_explanation.textContent = 'Noprocast is a way to prevent yourself from spending too much time on Hacker News. If you turn it on you\'ll only be allowed to visit the site for maxvisit minutes at a time, with gaps of minaway minutes in between.';
+        var noprocastNext = noprocrast.nextElementSibling;
+        var noprocastSpan = document.createElement('span');
+        noprocastSpan.textContent = 'Default: no';
+        noprocastNext.appendChild(noprocastSpan);
+        noprocastNext.appendChild(noprocrast_explanation);
 
-        maxvisit.next().append($('<span>Default: 20</span>'));
-        minaway.next().append($('<span>Default: 180</span>'));
+        var maxvisitSpan = document.createElement('span');
+        maxvisitSpan.textContent = 'Default: 20';
+        maxvisit.nextElementSibling.appendChild(maxvisitSpan);
 
-        var delay_explanation = $('<p>Delay allows you to delay the public posting of comments you make for delay minutes.</p>');
-        delay.next().append($('<span>Default: 0</span>')).append(delay_explanation);
+        var minawaySpan = document.createElement('span');
+        minawaySpan.textContent = 'Default: 180';
+        minaway.nextElementSibling.appendChild(minawaySpan);
+
+        var delay_explanation = document.createElement('p');
+        delay_explanation.textContent = 'Delay allows you to delay the public posting of comments you make for delay minutes.';
+        var delayNext = delay.nextElementSibling;
+        var delaySpan = document.createElement('span');
+        delaySpan.textContent = 'Default: 0';
+        delayNext.appendChild(delaySpan);
+        delayNext.appendChild(delay_explanation);
 
         //redirect to profile page after updating, instead of /x page
-        $('input[value="update"]').click(function() {
+        document.querySelector('input[value="update"]').addEventListener('click', function() {
           HN.setLocalStorage('update_profile', window.location.href);
         });
       }
     },
 
     getFormattingHelp: function(links_work) {
-      help = '<p>Blank lines separate paragraphs.</p>' +
-             '<p>Text after a blank line that is indented by two or more spaces is reproduced verbatim (this is intended for code).</p>' +
-             '<p>Text surrounded by asterisks is italicized, if the character after the first asterisk isn\'t whitespace.</p>';
+      var help = '<p>Blank lines separate paragraphs.</p>' +
+                 '<p>Text after a blank line that is indented by two or more spaces is reproduced verbatim (this is intended for code).</p>' +
+                 '<p>Text surrounded by asterisks is italicized, if the character after the first asterisk isn\'t whitespace.</p>';
       if (links_work)
         help += '<p>Urls become links.</p>';
 
-      return $('<div class="input-help">').append($(help));
+      var div = document.createElement('div');
+      div.classList.add('input-help');
+      div.innerHTML = help;
+      return div;
     },
 
     prettyPrintDaysAgo: function(days) {
